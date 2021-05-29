@@ -9,8 +9,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from util.data import RelationDataset, assure_folder_exist
-from util.embedding import EnEmbedding, ZhEmbedding, BertEnVocFeatures
-from util.tokenizer import EnTokenizer, ZhTokenizer, BertEnTokenizer
+from util.embedding import EnEmbedding
+from util.tokenizer import EnTokenizer
 from util.measure import OldMicroF1
 from base.cnn import ModelCNN
 from base.rbert import RBert
@@ -237,54 +237,6 @@ def train_tacred():
                 f1, p, r = trainer.test(folder, 0, test, batch=batch)
                 file.write(f"arch = {arch}, fn = {fn}, f1_test = {f1:.4f}, p_test = {p:.4f}, r_test = {r:.4f}\n")
                 file.flush()
-
-    file.close()
-    return
-
-
-def train_semeval_rbert():
-    cuda        = '0'
-    dataset     = 'semeval2010'
-    arch        = 'rbert'
-    bert_model  = 'bert-base-uncased'
-    fns         = range(0, 6)
-    n_relation  = 10
-    max_len     = 128
-    pre_epochs  = 2
-    epochs      = 10
-    batch       = 8
-    lr          = 2e-5
-    repeat      = 1
-    
-    home        = os.path.expanduser("~")
-    fresult     = f"../result/{dataset}_{arch}_coteaching_pre2.txt"
-    tokenizer   = BertEnTokenizer(bert_model=bert_model, max_len=max_len)
-    voc_emb     = BertEnVocFeatures()
-     
-    file = open(fresult, "a")
-    for k in range(repeat):
-        for fn in fns:
-            folder = os.path.join(home, f"model/{dataset}_{arch}_coteaching_pre2/fn_{fn}/")
-            print(folder)
-            ftrain = os.path.join(home, f"dataset/{dataset}/train_fn_{fn}.json")
-            fvalid = os.path.join(home, f"dataset/{dataset}/valid_fn_{fn}.json")
-            ftest  = os.path.join(home, f"dataset/{dataset}/test.json")
-            train  = RelationDataset(ftrain, tokenizer=tokenizer)
-            valid  = RelationDataset(fvalid, tokenizer=tokenizer)
-            test   = RelationDataset(ftest,  tokenizer=tokenizer)
-
-            models = [
-                RBert(bert_model=bert_model, n_class=n_relation),
-                RBert(bert_model=bert_model, n_class=n_relation)
-            ]
-            #ratio    = train.stat_relation()[0] * (fn * 0.1)
-            ratio    = fn * 0.1
-            #print(ratio)
-            trainer  = CoteachingTrainer(models, voc_emb, cuda_devices=cuda)
-            trainer.train(folder, train, valid, ratio=ratio, pre_epochs=pre_epochs, epochs=epochs, batch=batch, lr=lr)
-            f1, p, r = trainer.test(folder, 0, test, batch=batch)
-            file.write(f"arch = {arch}, fn = {fn}, f1_test = {f1:.4f}, p_test = {p:.4f}, r_test = {r:.4f}\n")
-            file.flush()
 
     file.close()
     return

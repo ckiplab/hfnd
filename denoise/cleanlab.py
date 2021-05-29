@@ -9,8 +9,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from util.data import RelationDataset, assure_folder_exist
-from util.embedding import EnEmbedding, ZhEmbedding, BertEnVocFeatures
-from util.tokenizer import EnTokenizer, ZhTokenizer, BertEnTokenizer
+from util.embedding import EnEmbedding
+from util.tokenizer import EnTokenizer
 from util.measure import MicroF1
 from base.cnn import ModelCNN, Trainer
 from base.rbert import RBert
@@ -341,61 +341,6 @@ def test_model_nyt():
             logits  = trainer.predict(folder, 0, test, batch=batch).cpu().numpy()
             np.savez(fpred, targets=targets, logits=logits)
     file.close()
-    return
-
-def train_zhwiki():
-    cuda        = '0'
-    dataset     = 'zhwiki'
-    arch        = 'cnn'
-    n_fold      = 4
-    n_relation  = 52
-    max_len     = 256
-    pre_epochs  = 10
-    epochs      = 200
-    batch       = 256
-    lr          = 0.0001
-    ratio       = 0.2
-    
-    home        = os.path.expanduser("~")
-    folder      = os.path.join(home, f"model/{dataset}/{arch}/")
-    fchar_list  = os.path.join(home, f"model/ckiptagger/embedding_character/token_list.npy")
-    fword_list  = os.path.join(home, f"model/ckiptagger/embedding_word/token_list.npy")
-    fchar_emb   = os.path.join(home, f"model/ckiptagger/embedding_character/vector_list.npy")
-    fword_emb   = os.path.join(home, f"model/ckiptagger/embedding_word/vector_list.npy")
-    ftrain      = os.path.join(home, f"dataset/{dataset}/train.json")
-    fvalid      = os.path.join(home, f"dataset/{dataset}/valid.json")
-    ftest       = os.path.join(home, f"dataset/{dataset}/test.json")
-    #fresult    = os.path.join(home, f"../result/{dataset}_cont_cleanlab_nr.txt")
-    f_prob      = os.path.join(home, f"model/{dataset}/{arch}/prob.npy")
-    f_qtable    = os.path.join(home, f"model/{dataset}/{arch}/qtable.npy")
-    
-    tokenizer   = ZhTokenizer(fchar_list, fword_list, max_len=max_len)
-    train       = RelationDataset(ftrain, tokenizer=tokenizer)
-    valid       = RelationDataset(fvalid, tokenizer=tokenizer)
-    test        = RelationDataset(ftest,  tokenizer=tokenizer)
-
-    voc_emb     = ZhEmbedding(fchar_emb, fword_emb)
-    model       = ModelCNN(arch=arch, max_len=max_len, voc_dim=voc_emb.voc_dim, n_class=n_relation)
-
-    cleanlab    = CleanLab(model, voc_emb, cuda_devices=cuda)
-    #prob_train  = cleanlab.estimate_prob(folder, train, valid, n_fold, epochs, batch, lr)
-    #qtable      = cleanlab.estimate_qtable(train, prob_train)
-
-    #with open(f_prob, 'wb')   as file: np.save(file, prob_train)
-    #with open(f_qtable, 'wb') as file: np.save(file, qtable)
-    models      = [
-        model, ModelCNN(arch=arch, max_len=max_len, voc_dim=voc_emb.voc_dim, n_class=n_relation)
-    ]
-
-    with open(f_prob, 'rb')   as file: prob_train = np.load(file)
-    with open(f_qtable, 'rb') as file: qtable     = np.load(file)
-    train, wgt  = cleanlab.clean_dataset(train, prob_train, qtable)
-    trainer     = CoteachingTrainer(models, voc_emb, cuda_devices=cuda)
-
-    #trainer.train(folder, train, valid, ratio=ratio, wgt=wgt, pre_epochs=pre_epochs, epochs=epochs, batch=batch, lr=lr)
-    f1, p, r = trainer.test(folder, 0, test, batch=batch)
-    print(f"arch = {arch}, f1_test = {f1:.4f}, p_test = {p:.4f}, r_test = {r:.4f}")
-
     return
 
 if __name__ == '__main__':

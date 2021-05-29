@@ -9,8 +9,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from util.data import RelationDataset, assure_folder_exist
-from util.embedding import EnEmbedding, ZhEmbedding, BertEnVocFeatures
-from util.tokenizer import EnTokenizer, ZhTokenizer, BertEnTokenizer
+from util.embedding import EnEmbedding
+from util.tokenizer import EnTokenizer
 from util.measure import MicroF1
 from base.cnn import ModelCNN
 from base.rbert import RBert
@@ -277,92 +277,6 @@ def train_tacred():
                 f1, p, r = trainer.test(folder, test, batch=batch)
                 file.write(f"arch = {arch}, fn = {fn}, f1_test = {f1:.4f}, p_test = {p:.4f}, r_test = {r:.4f}\n")
                 file.flush()
-
-    file.close()
-    return
-
-def train_semeval_rbert():
-    cuda        = '2'
-    dataset     = 'semeval2010'
-    arch        = 'rbert'
-    bert_model  = 'bert-base-uncased'
-    
-    fns         = range(0, 6)
-    n_relation  = 10
-    max_len     = 128
-    epochs      = 10
-    batch       = 16
-    lr          = 2e-5
-    repeat      = 5
-    
-    home        = os.path.expanduser("~")
-    tokenizer   = BertEnTokenizer(bert_model=bert_model, max_len=max_len)
-    fresult     = f"../result/{dataset}_{arch}_bootstrap.txt" 
-
-    file = open(fresult, "a")
-    for k in range(repeat):
-        for fn in fns:
-            folder      = os.path.join(home, f"model/{dataset}_{arch}_bootstrap/fn_{fn}/")
-            ftrain      = os.path.join(home, f"dataset/{dataset}/train_fn_{fn}.json")
-            fvalid      = os.path.join(home, f"dataset/{dataset}/valid_fn_{fn}.json")
-            ftest       = os.path.join(home, f"dataset/{dataset}/test.json")
-
-            train       = RelationDataset(ftrain, tokenizer=tokenizer)
-            valid       = RelationDataset(fvalid, tokenizer=tokenizer)
-            test        = RelationDataset(ftest,  tokenizer=tokenizer)
-
-            voc_emb     = BertEnVocFeatures()
-            model       = RBert(bert_model=bert_model, n_class=n_relation)
-            trainer     = BootstrapTrainer(model, voc_emb, cuda_devices=cuda)
-
-            trainer.train(folder, train, valid, epochs=epochs, batch=batch, lr=lr)
-            f1, p, r = trainer.test(folder, test, batch=batch)
-            file.write(f"arch = {arch}, fn = {fn}, f1_test = {f1:.4f}, p_test = {p:.4f}, r_test = {r:.4f}\n")
-            file.flush()
-
-    file.close()
-    return
-
-
-def train_tacred_rbert():
-    cuda        = '3'
-    dataset     = 'tacred'
-    arch        = 'rbert'
-    bert_model  = 'bert-base-uncased'
-    
-    fns         = range(0, 6)
-    n_relation  = 42
-    max_len     = 384
-    epochs      = 10
-    batch       = 6
-    lr          = 1e-5
-    repeat      = 5
-    
-    home        = os.path.expanduser("~")
-    tokenizer   = BertEnTokenizer(bert_model=bert_model, max_len=max_len)
-    fresult     = f"../result/{dataset}_{arch}_bootstrap.txt" 
-
-    file = open(fresult, "a")
-    for k in range(repeat):
-        for fn in fns:
-            folder      = os.path.join(home, f"model/{dataset}_{arch}_bootstrap/fn_{fn}/")
-            ftrain      = os.path.join(home, f"dataset/{dataset}/train_fn_{fn}.json")
-            fvalid      = os.path.join(home, f"dataset/{dataset}/valid_fn_{fn}.json")
-            ftest       = os.path.join(home, f"dataset/{dataset}/test.json")
-
-            train       = RelationDataset(ftrain, tokenizer=tokenizer)
-            valid       = RelationDataset(fvalid, tokenizer=tokenizer)
-            test        = RelationDataset(ftest,  tokenizer=tokenizer)
-
-            voc_emb     = BertEnVocFeatures()
-            model       = RBert(bert_model=bert_model, n_class=n_relation)
-            trainer     = BootstrapTrainer(model, voc_emb, cuda_devices=cuda)
-
-            trainer.train(folder, train, valid, epochs=epochs, batch=batch, lr=lr)
-            f1, p, r = trainer.test(folder, test, batch=batch)
-            file.write(f"arch = {arch}, fn = {fn}, f1_test = {f1:.4f}, p_test = {p:.4f}, r_test = {r:.4f}\n")
-            file.flush()
-
     file.close()
     return
 
